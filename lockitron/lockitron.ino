@@ -96,6 +96,8 @@ void toggleLock(boolean lockState) {
   
   // Else, lock it
   else servo.write(0);
+  
+  doorlocked = !doorLocked;
 }
 
 
