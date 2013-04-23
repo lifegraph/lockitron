@@ -34,10 +34,7 @@ const char app_namespace[] = "...";
 const char app_key[] = "...";
 const char app_secret[] = "...";
  
-// Pin our LED is connected to.
-int light = 13;
- 
- 
+boolean doorLocked = true;
 /**
  * Setup
  */
@@ -47,7 +44,6 @@ void setup()
   // Setup ports.
   Serial.begin(9600);
   wifiSerial.begin(9600);
-  pinMode(light, OUTPUT);
  
   // Setup network connection.
   Serial.println(F("Connecting to Wifi..."));
@@ -60,35 +56,46 @@ void setup()
     Serial.println(F("Joined wifi network."));
   }
   
-  myservo.attach(9); 
+  servo.attach(9); 
   
   // Initialize access tokens.
   Lifegraph.configure(app_namespace, app_key, app_secret);
-  Lifegraph.readIdentity(rfid, &wifiSerial, access_token);
+  
 }
 
 void loop()
 { 
-  // Request if there are unread notifications on Facebook.
-  int unread_count;
-  int status_code = Facebook.unreadNotifications ( access_token, &unread_count );
+  // read rfid
+  Lifegraph.readIdentity(rfid, &wifiSerial, access_token);
+
+  Serial.print(F("Found Acccess token for RFID"));
+  Serial.println(access_token);
+  // Grab the fbid of the corresponding rfid
+  int numFound = 0;
   
-  // If the request is successful (HTTP OK), update the light accordingly.
-  if (status_code == 200) {
-    digitalWrite(light, unread_count > 0 ? HIGH : LOW);
+  // Check if fbid is from a friend
+  int status_code = Facebook.findString ( access_token, "me/friends?fields=id", "769075675" ,&numFound );
+  
+  Serial.print("Found Friends: ");
+  Serial.println(numFound, DEC);
+  
+  // If it is, toggle the lock
+  if (numFound) {
+    toggleLock(!doorLocked);
+    Serial.println("Toggling Lock!");
   }
-
-  // Notify terminal of our status.
-  Serial.print("HTTP Status Code: ");
-  Serial.print(status_code);
-  Serial.print(" Unread notifications: ");
-  Serial.println(unread_count);
 }
 
-void openDoor() {
-  servo.write(180); 
+/*
+Toggles the state of the lock
+*/
+void toggleLock(boolean lockState) {
+  
+  // If the door is locked, unlock it
+  if (lockState) servo.write(180); 
+  
+  // Else, lock it
+  else servo.write(0);
 }
 
-void closeDoor() {
- servo.write(0); 
-}
+
